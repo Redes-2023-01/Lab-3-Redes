@@ -38,10 +38,15 @@ elif (op == 4 or op == 250):
     filename = "250.txt"
     filesize = "250MB"
 
+filename = "hash.txt"
 
 print('The server is ready to receive')
+#Lista de respuestas
 responses = []
+#Lista de conexiones
 cons = []  
+#Lista de tiempos
+times = []
 
 # Función para enviar un archivo a un cliente
 def send_file(connectionSocket, status):
@@ -51,18 +56,21 @@ def send_file(connectionSocket, status):
         with open(filename, 'rb') as file:
             data = file.read()
         filehash = hashlib.sha256(data).hexdigest()
-
         # Enviar el hash y los datos del archivo al cliente
+        time1 = time.time()
         connectionSocket.send(filename.encode())
         connectionSocket.send(filehash.encode())
         connectionSocket.send(data)
+
         #response =  connectionSocket.recv(1024).decode()
         #responses.append(response)
+        time2 = time.time()
+        times.append(time2-time1)
 
     else:
         # Si el archivo no existe, enviar un mensaje de error al cliente
         connectionSocket.send(b"Error: File doesn't exist")
-
+    
     connectionSocket.close()
 
 # Función para procesar las solicitudes de los clientes
@@ -74,10 +82,8 @@ def process_requests():
         connectionSocket, addr = serverSocket.accept()
         print(f"Connection from {addr}")
         req = connectionSocket.recv(1024).decode().split(";")
-        status = req[1]
-        #Lista de conexiones
+        status = req[1]        
         
-
         # Agregar la solicitud del cliente a la cola
         if status == "ready":
             requests_queue.put((connectionSocket, status))
@@ -96,10 +102,10 @@ def process_requests():
                 thread = threading.Thread(target=send_file, args=(connectionSocket, filename))
                 threads.append(thread)
                 thread.start()
+                
 
             # Esperar a que todos los hilos terminen antes de continuar
             for thread in threads:
-                
                 thread.join()
 
             now = time.strftime("%Y-%m-%d-%H-%M-%S")
@@ -114,7 +120,8 @@ def process_requests():
                     con = cons[i]
                     #resp = responses[i]
                     resp = "Exitosa"
-                    log.write(f"{con}, entrega: {resp}\n")
+                    times1 = times[i]
+                    log.write(f"{con}, entrega: {resp} en {times1} segundos\n")
                     i+=1
                 
                 
