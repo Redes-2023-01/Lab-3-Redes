@@ -1,7 +1,8 @@
 from socket import *
 import threading
+import hashlib
 
-serverName = '192.168.68.24'
+serverName = '192.168.68.37'
 serverPort = 12000
 MAX_CONNECTIONS = 5
 
@@ -18,21 +19,39 @@ class ClientThread(threading.Thread):
         #Conecta el socket del cliente al socket del servidor. Aquí se realiza el three-way handshake
         clientSocket.connect((serverName,serverPort))
 
-        filename = "1.txt"
-        clientSocket.send(filename.encode())
+        status = "ready"
+        cliend_id = "Cliente"+str(self.threadID)
+        request = cliend_id + ";" + status
+        clientSocket.send(request.encode())
+
+        if status != "ready":
+            print("Error: El cliente debe estar listo")
+            return
 
         response = clientSocket.recv(1024).decode()
 
-        if response == "Error: El archivo no existe":
+        if response == "Error: File doesn't exist":
             print("Error: El archivo no existe")
         else:
-            with open("ArchivosRecibidos\Cliente"+str(self.threadID)+"-Prueba"+str(MAX_CONNECTIONS)+".txt", "wb") as file:
+            receivedHash = clientSocket.recv(1024).decode()
+            filename = "ArchivosRecibidos\Cliente"+str(self.threadID)+"-Prueba"+str(MAX_CONNECTIONS)+".txt" 
+            with open(filename, "wb") as file:
                 data = clientSocket.recv(1024)
                 while data:
                     file.write(data)
                     data = clientSocket.recv(1024)
-
-            print(f"Archivo {filename} descargado exitosamente")
+            file.close()
+            with open(filename, 'rb') as file:
+                data = file.read()
+            calculatedHash = hashlib.sha256(data).hexdigest()
+            print(f"Hash recibido: {receivedHash}")
+            print(f"Hash calculado: {calculatedHash}")
+            if receivedHash == calculatedHash:
+                print(f"File {response} has been downloaded succesfully")
+                clientSocket.send("Exitosa".encode())
+            else:
+                print("The file has been corrupted")
+                clientSocket.send("Fallida".encode())
 
         clientSocket.close()
 
@@ -50,4 +69,4 @@ for thread in threads:
 for thread in threads:
     thread.join()
 
-print("Todos los archivos han sido descargados exitosamente")
+print("All files have been downloaded succesfully")
