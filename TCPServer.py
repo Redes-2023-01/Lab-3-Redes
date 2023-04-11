@@ -38,8 +38,6 @@ elif (op == 4 or op == 250):
     filename = "250.txt"
     filesize = "250MB"
 
-filename = "hash.txt"
-
 print('The server is ready to receive')
 #Lista de respuestas
 responses = []
